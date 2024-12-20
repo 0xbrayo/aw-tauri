@@ -231,17 +231,26 @@ fn handle(rx: Receiver<ModuleMessage>, state: Arc<Mutex<ManagerState>>) {
                         if  *restart_count < 3 {
                             *restart_count += 1;
                             state.start_module(&name_clone);
+                            let app = &*get_app_handle().lock().expect("failed to get app handle");
+
+                            app.dialog()
+                                .message(format!("{name_clone} crashed. Restarting..."))
+                                .kind(MessageDialogKind::Error)
+                                .title("Warning")
+                                .show(|_| {});
+                            println!("{name_clone} exited with error");
+                        } else {
+                            let app = &*get_app_handle().lock().expect("failed to get app handle");
+
+                            app.dialog()
+                                .message(format!("{name_clone} keeps on crashing. Restart limit reached."))
+                                .kind(MessageDialogKind::Error)
+                                .title("Warning")
+                                .show(|_| {});
+                            println!("{name_clone} exited with error too many times");
                         }
                     });
 
-                    let app = &*get_app_handle().lock().expect("failed to get app handle");
-
-                    app.dialog()
-                        .message(format!("{name} crashed. Restarting..."))
-                        .kind(MessageDialogKind::Error)
-                        .title("Warning")
-                        .show(|_| {});
-                    println!("{name} exited with error");
                     println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
                     println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
                 }
