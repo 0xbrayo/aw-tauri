@@ -1,9 +1,9 @@
-name: 'Publish Linux Arm builds'
+name: "Publish Linux Arm builds"
 
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 jobs:
@@ -63,7 +63,7 @@ jobs:
 
             # Install frontend dependencies
             npm install
-            
+
             make prebuild
 
             # Build the application
@@ -74,7 +74,7 @@ jobs:
 
       # TODO: Combine this with the basic workflow and upload the files to the Release.
       - name: Upload deb bundle
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@vv
         with:
           name: Debian Bundle
           path: ${{ github.workspace }}/src-tauri/target/release/bundle/deb/appname_${{ env.APP_VERSION }}_${{ matrix.deb }}.deb
