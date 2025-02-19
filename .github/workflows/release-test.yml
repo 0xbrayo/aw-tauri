@@ -1,6 +1,6 @@
 # From: https://tauri.app/v1/guides/building/cross-platform
 
-name: Release
+name: Release fast test
 on:
   push:
     tags:
@@ -16,9 +16,9 @@ jobs:
       matrix:
         include:
           - platform: 'macos-latest'
-          - platform: 'ubuntu-22.04'
-          - platform: 'ubuntu-22.04-arm' # for Arm based linux.
-          - platform: 'windows-latest'
+          # - platform: 'ubuntu-22.04'
+          # - platform: 'ubuntu-22.04-arm' # for Arm based linux.
+          # - platform: 'windows-latest'
     runs-on: ${{ matrix.platform }}
 
     steps:
