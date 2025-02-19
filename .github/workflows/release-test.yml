@@ -1,6 +1,6 @@
 # From: https://tauri.app/v1/guides/building/cross-platform
 
-name: Release
+name: Release fast test
 on:
   push:
     tags:
@@ -16,9 +16,9 @@ jobs:
       matrix:
         include:
           - platform: 'macos-latest'
-          - platform: 'ubuntu-22.04'
-          - platform: 'ubuntu-22.04-arm' # for Arm based linux.
-          - platform: 'windows-latest'
+          # - platform: 'ubuntu-22.04'
+          # - platform: 'ubuntu-22.04-arm' # for Arm based linux.
+          # - platform: 'windows-latest'
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -91,11 +91,10 @@ jobs:
           run: |
             mkdir -p artifacts
             cd artifacts
-            for asset_url in $(echo '${{ steps.get_draft.outputs.assets }}' | jq -r '.[].url'); do
-              curl -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                    -H "Accept: application/octet-stream" \
-                    -o "$(echo $asset_url | jq -r '.name')" \
-                    "$asset_url"
+            # Parse the assets JSON and extract browser_download_url and name
+            echo '${{ steps.get_draft.outputs.assets }}' | jq -r '.[] | "\(.browser_download_url) \(.name)"' | while read -r url name; do
+              echo "Downloading $name from $url"
+              curl -L -o "$name" "$url"
             done
   
         - name: Zip artifacts and delete originals
