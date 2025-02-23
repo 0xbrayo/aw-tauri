@@ -1,64 +1,111 @@
-name: Release arch
+name: Arch Linux Container Workflow
+
 on:
   push:
-    tags:
-      - "v*"
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  # Allows manual workflow runs
   workflow_dispatch:
 
 jobs:
-  release:
-    permissions:
-      contents: write
+  arch-container:
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
       options: --privileged
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
 
-      - name: Install dependencies
-        run: |
-          pacman -Syu --noconfirm
-          pacman -S --needed --noconfirm \
-            base-devel \
-            webkit2gtk-4.1 \
-            gtk3 \
-            libappindicator-gtk3 \
-            librsvg \
-            nodejs \
-            openssl \
-            appmenu-gtk-module \
-            curl \
-            wget \
-            file \
-            npm \
-            rust \
-            cargo \
-            git \
-            xdg-utils
+    - name: Update system and install basic packages
+      run: |
+        pacman -Syu --noconfirm
+        pacman -S --noconfirm base-devel git
 
-      - name: Install node dependencies
-        run: npm install
-        working-directory: aw-tauri
+    # Example step showing how to install additional packages
+    - name: Install additional packages
+      run: |
+        pacman -S --noconfirm python python-pip
 
-      - name: Prebuild
-        run: |
-            cd aw-webui && make build && cd ..
-            mkdir -p src-tauri/icons
-            npm run tauri icon "./aw-webui/media/logo/logo.png"
-        working-directory: aw-tauri
+    # Example step showing how to run commands
+    - name: Run your commands
+      run: |
+        python --version
+        echo "Running in Arch Linux container"
+        cat /etc/os-release
 
-      - name: Build the app
-        run: npm run tauri build
-        working-directory: aw-tauri
+    # Example step showing how to run your build/test commands
+    - name: Build and test
+      run: |
+        # Add your build/test commands here
+        echo "Add your build steps here"
+
+
+# name: Release arch
+# on:
+#   push:
+#     tags:
+#       - "v*"
+#   workflow_dispatch:
+
+# jobs:
+#   release:
+#     permissions:
+#       contents: write
+#     runs-on: ubuntu-latest
+#     container:
+#       image: archlinux:latest
+#       options: --privileged
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+#         with:
+#           submodules: recursive
+#           fetch-depth: 0
+
+#       - name: Install dependencies
+#         run: |
+#           pacman -Syu --noconfirm
+#           pacman -S --needed --noconfirm \
+#             base-devel \
+#             webkit2gtk-4.1 \
+#             gtk3 \
+#             libappindicator-gtk3 \
+#             librsvg \
+#             nodejs \
+#             openssl \
+#             appmenu-gtk-module \
+#             curl \
+#             wget \
+#             file \
+#             npm \
+#             rust \
+#             cargo \
+#             git \
+#             xdg-utils
+
+#       - name: Install node dependencies
+#         run: npm install
+#         working-directory: aw-tauri
+
+#       - name: Prebuild
+#         run: |
+#             cd aw-webui && make build && cd ..
+#             mkdir -p src-tauri/icons
+#             npm run tauri icon "./aw-webui/media/logo/logo.png"
+#         working-directory: aw-tauri
+
+#       - name: Build the app
+#         run: npm run tauri build
+#         working-directory: aw-tauri
       
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: tauri-app
+#       - name: Upload artifacts
+#         uses: actions/upload-artifact@v2
+#         with:
+#           name: tauri-app
           
