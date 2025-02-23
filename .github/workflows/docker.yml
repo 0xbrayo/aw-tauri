@@ -1,0 +1,62 @@
+name: Release arch 
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --needed --noconfirm \
+            base-devel \
+            webkit2gtk-4.1 \
+            gtk3 \
+            libappindicator-gtk3 \
+            librsvg \
+            nodejs \
+            openssl \
+            appmenu-gtk-module \
+            curl \
+            wget \
+            file \
+            npm \
+            rust \
+            cargo \
+            git \
+            xdg-utils
+
+      - name: Install node dependencies
+        run: npm install
+
+      - name: Prebuild
+        run: |
+          	cd aw-webui && make build && cd ..
+            mkdir -p src-tauri/icons
+            npm run tauri icon "./aw-webui/media/logo/logo.png"
+
+      - name: Build the app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'aw-tauri v__VERSION__'
+          releaseBody: 'See the assets to download and install this version.'
+          releaseDraft: true
+          prerelease: false
+          
