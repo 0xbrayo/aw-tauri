@@ -1,111 +1,74 @@
-name: Arch Linux Container Workflow
+# From: https://tauri.app/v1/guides/building/cross-platform
 
+name: Release
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
-  # Allows manual workflow runs
+    branches:
+      - master
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
-  arch-container:
-    runs-on: ubuntu-latest
-    container:
-      image: archlinux:latest
-      options: --privileged
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # - platform: 'macos-latest'
+          - platform: 'fedora-latest'
+          # - platform: 'windows-latest'
+    runs-on: ${{ matrix.platform }}
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        submodules: recursive
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Update system and install basic packages
-      run: |
-        pacman -Syu --noconfirm
-        pacman -S --noconfirm base-devel git
+      - name: Install dependencies (linux only)
+        if: matrix.platform == 'fedora-latest'
+        # You can remove libayatana-appindicator3-dev if you don't use the system tray feature.
+        run: |
+          sudo dnf check-update
+          sudo dnf install webkit2gtk4.1-devel \
+            openssl-devel \
+            curl \
+            wget \
+            file \
+            libappindicator-gtk3-devel \
+            librsvg2-devel
+          sudo dnf group install "c-development"
 
-    # Example step showing how to install additional packages
-    - name: Install additional packages
-      run: |
-        pacman -S --noconfirm python python-pip
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
 
-    # Example step showing how to run commands
-    - name: Run your commands
-      run: |
-        python --version
-        echo "Running in Arch Linux container"
-        cat /etc/os-release
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
 
-    # Example step showing how to run your build/test commands
-    - name: Build and test
-      run: |
-        # Add your build/test commands here
-        echo "Add your build steps here"
+      - name: Sync node version and setup cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
 
+      - name: Install node dependencies
+        run: npm install
 
-# name: Release arch
-# on:
-#   push:
-#     tags:
-#       - "v*"
-#   workflow_dispatch:
+      - name: Prebuild
+        run: make prebuild
 
-# jobs:
-#   release:
-#     permissions:
-#       contents: write
-#     runs-on: ubuntu-latest
-#     container:
-#       image: archlinux:latest
-#       options: --privileged
+      - name: Build the app
+        uses: tauri-apps/tauri-action@v0
 
-#     steps:
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
-#         with:
-#           submodules: recursive
-#           fetch-depth: 0
-
-#       - name: Install dependencies
-#         run: |
-#           pacman -Syu --noconfirm
-#           pacman -S --needed --noconfirm \
-#             base-devel \
-#             webkit2gtk-4.1 \
-#             gtk3 \
-#             libappindicator-gtk3 \
-#             librsvg \
-#             nodejs \
-#             openssl \
-#             appmenu-gtk-module \
-#             curl \
-#             wget \
-#             file \
-#             npm \
-#             rust \
-#             cargo \
-#             git \
-#             xdg-utils
-
-#       - name: Install node dependencies
-#         run: npm install
-#         working-directory: aw-tauri
-
-#       - name: Prebuild
-#         run: |
-#             cd aw-webui && make build && cd ..
-#             mkdir -p src-tauri/icons
-#             npm run tauri icon "./aw-webui/media/logo/logo.png"
-#         working-directory: aw-tauri
-
-#       - name: Build the app
-#         run: npm run tauri build
-#         working-directory: aw-tauri
-      
-#       - name: Upload artifacts
-#         uses: actions/upload-artifact@v2
-#         with:
-#           name: tauri-app
-          
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }} # This only works if your workflow triggers on new tags.
+          releaseName: 'aw-tauri v__VERSION__' # tauri-action replaces \_\_VERSION\_\_ with the app version.
+          releaseBody: 'See the assets to download and install this version.'
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
