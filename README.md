@@ -1,5 +1,6 @@
 aw-tauri
 ========
+[![Build](https://github.com/ActivityWatch/aw-tauri/actions/workflows/build.yml/badge.svg)](https://github.com/ActivityWatch/aw-tauri/actions/workflows/build.yml)
 
 Experimenting with implementing ActivityWatch using [Tauri](https://tauri.app/).
 
@@ -28,10 +29,9 @@ Benefits of Tauri:
 
 # Prerequisites
 
+ - Tauri dependencies (see [their docs](https://v2.tauri.app/start/prerequisites/))
  - Node.js
  - Rust
- - Tauri CLI (`npm install -g @tauri-apps/cli`)
- - Tauri dependencies (see [their docs](https://v2.tauri.app/start/prerequisites/))
 
 # Usage
 
@@ -39,7 +39,12 @@ To run:
 
 ```sh
 npm install
-npm run tauri dev
+make dev
+```
+To build:
+
+```sh
+make build
 ```
 
 # Repo stucture
@@ -62,14 +67,14 @@ Secondary goal is to add extras supported by Tauri (updater, autostart).
      - [x] Responsive running/stopped state for watchers (no "update" button)
      - [x] Start/stop via modules menu
      - [x] Detect bundled & system modules
- - [ ] Polish
-     - [ ] Remove placeholder Vue app
+ - [x] Polish
+     - [x] Remove placeholder Vue app
          - Or replace with new UI for module management? (a bit redundant)
      - [x] Build aw-webui as part of build process
-     - [ ] Error dialog when module crashes, restart logic
-         - https://beta.tauri.app/features/dialog/
-     - [ ] https://beta.tauri.app/features/autostart/
-     - [ ] https://beta.tauri.app/features/single-instance/
+     - [x] Error dialog when module crashes, restart logic
+         - https://tauri.app/plugin/dialog/
+     - [x] https://tauri.app/plugin/autostart/
+     - [x] https://tauri.app/plugin/single-instance/
 
 ---
 
