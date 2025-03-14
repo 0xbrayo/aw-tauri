@@ -3,6 +3,9 @@
   "productName": "aw-tauri",
   "version": "0.1.0",
   "identifier": "net.activitywatch.app",
+  "build": {
+    "devUrl": "http://google.com"
+  },
   "app": {
     "windows": [
       {

@@ -1,16 +1,9 @@
 use aw_server::endpoints::build_rocket;
 use lazy_static::lazy_static;
-use serde::{Deserialize, Serialize};
-use std::fs::{create_dir_all, read_to_string, remove_file, write, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Condvar, Mutex, OnceLock};
-use std::thread;
-use std::time::Duration;
-use tauri_plugin_notification::NotificationExt;
-use tauri_plugin_opener::OpenerExt;
 
-
-use log::{info, warn};
+use log::info;
 use tauri::{
     AppHandle, Manager,
 };
@@ -24,7 +17,7 @@ impl Drop for AppHandleWrapper {
     }
 }
 
-static HANDLE: OnceLock<AppHandleWrapper> = OnceLock::new();
+// static HANDLE: OnceLock<AppHandleWrapper> = OnceLock::new();
 lazy_static! {
     static ref HANDLE_CONDVAR: (Mutex<bool>, Condvar) = (Mutex::new(false), Condvar::new());
 }
@@ -38,8 +31,6 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    
-
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
@@ -81,14 +72,12 @@ pub fn run() {
                 };
                 
                 tauri::async_runtime::spawn(build_rocket(server_state, aw_config).launch());
-                let url = format!("http://localhost:{}/", 5600)
-                    .parse()
-                    .unwrap();
+                let url = format!("http://localhost:{}/", 5600);
                 let mut main_window = app.get_webview_window("main").unwrap();
 
                 main_window
-                    .navigate(url)
-                    .expect("error navigating main window");
+                           .eval(&format!("window.location.href = '{}'", url))
+                           .map_err(|e| e.to_string())?;
 
             }
             
