@@ -85,7 +85,7 @@ impl ManagerState {
         info!("Started module: {name}");
         self.modules_running.insert(name.to_string(), true);
         self.modules_pid.insert(name.to_string(), pid);
-        self.modules_args.insert(name.to_string(), args);
+        // self.modules_args.insert(name.to_string(), args);
         self.modules_pending_shutdown.remove(name);
         debug!("Running modules: {:?}", self.modules_running);
         self.update_tray_menu();
@@ -262,6 +262,7 @@ pub fn start_manager() -> Arc<Mutex<ManagerState>> {
             // Split args string on whitespace, preserving quoted arguments
             Some(shell_words::split(args_str).unwrap_or_default())
         };
+        state.lock().unwrap().modules_args.insert(name.to_string(), args.clone());
         state.lock().unwrap().start_module(name, args.as_ref());
     }
 
