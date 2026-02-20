@@ -60,9 +60,9 @@ jobs:
 
       - name: Prebuild
         run: make prebuild
-        
+
       - name: Add rust target
-        if : matrix.args != null
+        if: matrix.args != null
         run: rustup target add $(echo "${{ matrix.args }}" | cut -d' ' -f2)
 
       - name: Build the app
