@@ -19,7 +19,8 @@ lazy_static! {
 
 #[cfg(not(target_os = "android"))]
 pub fn get_config_dir() -> Result<PathBuf, ()> {
-    let mut dir = appdirs::user_config_dir(Some("activitywatch"), None, false)?;
+    let mut dir = dirs::config_dir().ok_or(())?;
+    dir.push("activitywatch");
     dir.push("aw-tauri");
     fs::create_dir_all(dir.clone()).expect("Unable to create config dir");
     Ok(dir)
@@ -32,7 +33,8 @@ pub fn get_config_dir() -> Result<PathBuf, ()> {
 
 #[cfg(not(target_os = "android"))]
 pub fn get_data_dir() -> Result<PathBuf, ()> {
-    let mut dir = appdirs::user_data_dir(Some("activitywatch"), None, false)?;
+    let mut dir = dirs::data_dir().ok_or(())?;
+    dir.push("activitywatch");
     dir.push("aw-tauri");
     fs::create_dir_all(dir.clone()).expect("Unable to create data dir");
     Ok(dir)
@@ -40,13 +42,17 @@ pub fn get_data_dir() -> Result<PathBuf, ()> {
 
 #[cfg(target_os = "android")]
 pub fn get_data_dir() -> Result<PathBuf, ()> {
-    Ok(ANDROID_DATA_DIR.lock()..expect("Unable to create data dir").to_path_buf())
+    Ok(ANDROID_DATA_DIR
+        .lock()
+        .expect("Unable to create data dir")
+        .to_path_buf())
 }
 
 #[cfg(all(not(target_os = "android"), target_os = "linux"))]
 pub fn get_log_dir() -> Result<PathBuf, ()> {
     // Linux uses cache dir for logs
-    let mut dir = appdirs::user_cache_dir(Some("activitywatch"), None)?;
+    let mut dir = dirs::cache_dir().ok_or(())?;
+    dir.push("activitywatch");
     dir.push("aw-tauri");
     dir.push("log");
     fs::create_dir_all(dir.clone()).expect("Unable to create log dir");
@@ -56,7 +62,24 @@ pub fn get_log_dir() -> Result<PathBuf, ()> {
 #[cfg(all(not(target_os = "android"), not(target_os = "linux")))]
 pub fn get_log_dir() -> Result<PathBuf, ()> {
     // Windows and macOS use dedicated log directories
-    let mut dir = appdirs::user_log_dir(Some("activitywatch"), None)?;
+    #[cfg(target_os = "windows")]
+    let mut dir = {
+        // Windows: use local data directory for logs
+        let mut d = dirs::data_local_dir().ok_or(())?;
+        d.push("activitywatch");
+        d
+    };
+
+    #[cfg(target_os = "macos")]
+    let mut dir = {
+        // macOS: use ~/Library/Logs
+        let mut d = dirs::home_dir().ok_or(())?;
+        d.push("Library");
+        d.push("Logs");
+        d.push("activitywatch");
+        d
+    };
+
     dir.push("aw-tauri");
     fs::create_dir_all(dir.clone()).expect("Unable to create log dir");
     Ok(dir)
@@ -91,8 +114,12 @@ pub fn get_runtime_dir() -> PathBuf {
         }
     }
     // Fallback to cache dir
-    let mut dir = appdirs::user_cache_dir(Some("activitywatch"), None)
-        .unwrap_or_else(|_| PathBuf::from("/tmp"));
+    let mut dir = dirs::cache_dir()
+        .map(|mut d| {
+            d.push("activitywatch");
+            d
+        })
+        .unwrap_or_else(|| PathBuf::from("/tmp"));
     dir.push("aw-tauri");
     let _ = fs::create_dir_all(dir.clone());
     dir
