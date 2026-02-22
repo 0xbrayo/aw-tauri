@@ -498,7 +498,7 @@ pub fn run() {
                 let url = format!("http://localhost:{}/", user_config.port)
                     .parse()
                     .expect("Failed to parse localhost url");
-                let mut main_window = app
+                let main_window = app
                     .get_webview_window("main")
                     .expect("Failed to show main window");
 
