@@ -461,6 +461,7 @@ dependencies = [
  "aw-datastore",
  "aw-server",
  "chrono",
+ "clap",
  "dirs 5.0.1",
  "fern",
  "glob",

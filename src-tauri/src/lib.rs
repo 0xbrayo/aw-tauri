@@ -18,6 +18,25 @@ mod dirs;
 mod logging;
 mod manager;
 
+/// CLI arguments passed from main()
+#[derive(Debug, Default)]
+pub struct CliArgs {
+    pub testing: bool,
+    pub verbose: bool,
+    pub port: Option<u16>,
+}
+
+static CLI_ARGS: OnceLock<CliArgs> = OnceLock::new();
+
+/// Set CLI args before calling run(). Must be called at most once.
+pub fn set_cli_args(args: CliArgs) {
+    CLI_ARGS.set(args).expect("CLI args already set");
+}
+
+fn get_cli_args() -> &'static CliArgs {
+    CLI_ARGS.get_or_init(CliArgs::default)
+}
+
 use log::{info, trace, warn};
 use tauri::{
     menu::{Menu, MenuItem},
@@ -402,6 +421,13 @@ pub fn run() {
         eprintln!("Failed to rotate log: {}", e);
     }
 
+    let cli_args = get_cli_args();
+
+    // Set verbose env var before logging init so it picks it up
+    if cli_args.verbose {
+        std::env::set_var("AW_DEBUG", "1");
+    }
+
     // Initialize logging
     if let Err(e) = logging::setup_logging() {
         // Can't use log here since logging isn't initialized yet
@@ -460,11 +486,16 @@ pub fn run() {
                     }
                 }
 
-                let testing = false;
+                let testing = cli_args.testing;
                 let legacy_import = false;
 
                 let mut aw_config = aw_server::config::create_config(testing);
-                aw_config.port = user_config.port;
+
+                // Port priority: CLI flag > testing default (5666) > config file
+                let port = cli_args
+                    .port
+                    .unwrap_or(if testing { 5666 } else { user_config.port });
+                aw_config.port = port;
                 let db_path = aw_server::dirs::db_path(testing)
                     .expect("Failed to get db path")
                     .to_str()
@@ -494,17 +525,19 @@ pub fn run() {
                     asset_resolver: aw_server::endpoints::AssetResolver::new(asset_path_opt),
                     device_id,
                 };
-                if !is_port_available(user_config.port).expect("Failed to check port availability")
-                {
+                if !is_port_available(port).expect("Failed to check port availability") {
                     app.dialog()
-                        .message(format!("Port {} is already in use", user_config.port))
+                        .message(format!("Port {} is already in use", port))
                         .kind(MessageDialogKind::Error)
                         .title("Error")
                         .show(|_| {});
-                    panic!("Port {} is already in use", user_config.port);
+                    panic!("Port {} is already in use", port);
+                }
+                if testing {
+                    info!("Running in testing mode (port {})", port);
                 }
                 tauri::async_runtime::spawn(build_rocket(server_state, aw_config).launch());
-                let url = format!("http://localhost:{}/", user_config.port)
+                let url = format!("http://localhost:{}/", port)
                     .parse()
                     .expect("Failed to parse localhost url");
                 // Create main window programmatically to attach initialization script.
