@@ -22,6 +22,7 @@ use log::{info, trace, warn};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{TrayIconBuilder, TrayIconId},
+    webview::WebviewWindowBuilder,
     AppHandle, Manager,
 };
 
@@ -386,6 +387,14 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[tauri::command]
+fn open_external(url: String, app: tauri::AppHandle) {
+    info!("Opening external URL in browser: {}", url);
+    if let Err(e) = app.opener().open_url(&url, None::<&str>) {
+        warn!("Failed to open URL in browser: {}", e);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Rotate log if needed (before initializing logging)
@@ -498,13 +507,31 @@ pub fn run() {
                 let url = format!("http://localhost:{}/", user_config.port)
                     .parse()
                     .expect("Failed to parse localhost url");
-                let mut main_window = app
-                    .get_webview_window("main")
-                    .expect("Failed to show main window");
-
-                main_window
-                    .navigate(url)
-                    .expect("Error navigating main window");
+                // Create main window programmatically to attach initialization script.
+                // The script intercepts clicks on external links and opens them in the system
+                // browser via the open_external Tauri command. This approach works reliably for
+                // SPA-generated links where on_navigation (which only fires for top-level
+                // webview navigations) would miss JS-driven internal route changes.
+                let _main_window =
+                    WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::External(url))
+                        .title("aw-tauri")
+                        .inner_size(800.0, 600.0)
+                        .visible(false)
+                        .initialization_script(
+                            r#"
+                    document.addEventListener('click', function(e) {
+                        var el = e.target;
+                        while (el && el.tagName !== 'A') { el = el.parentElement; }
+                        if (el && el.href && !/^(http:\/\/localhost|tauri:|about:)/.test(el.href)) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.__TAURI_INTERNALS__.invoke('open_external', { url: el.href });
+                        }
+                    }, true);
+                    "#,
+                        )
+                        .build()
+                        .expect("Failed to create main window");
                 let manager_state = manager::start_manager();
 
                 let open = MenuItem::with_id(app, "open", "Open Dashboard", true, None::<&str>)
@@ -590,7 +617,7 @@ pub fn run() {
             };
         })
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![greet, open_external])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
