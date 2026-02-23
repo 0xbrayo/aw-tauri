@@ -212,6 +212,7 @@ pub fn listen_for_lockfile() {
                         let app = &*get_app_handle().lock().expect("Failed to get app handle");
                         if let Some(window) = app.webview_windows().get("main") {
                             window.show().expect("Failed to show main window");
+                            window.set_focus().expect("Failed to focus main window");
                         }
                     }
                     Err(e) => {
