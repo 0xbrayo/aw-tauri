@@ -18,6 +18,8 @@ jobs:
           - platform: 'ubuntu-22.04'
           - platform: 'ubuntu-22.04-arm' # for Arm based linux.
           - platform: 'windows-latest'
+          - platform: 'windows-11-arm' # for Windows ARM64
+            args: '--target aarch64-pc-windows-msvc --bundles msi'
     runs-on: ${{ matrix.platform }}
 
     steps:
@@ -58,6 +60,29 @@ jobs:
 
       - name: Prebuild
         run: make prebuild
+
+      - name: Add rust target
+        if: matrix.args != null
+        run: rustup target add $(echo "${{ matrix.args }}" | cut -d' ' -f2)
+
+      - name: Pre-install Tauri bundler tools (Windows ARM64)
+        if: matrix.platform == 'windows-11-arm'
+        shell: pwsh
+        run: |
+          # windows-11-arm runners lack TLS in their default HTTP client,
+          # so tauri-bundler's internal downloader fails. Pre-download WiX
+          # with PowerShell (which has proper TLS) into the cache dir tauri expects.
+          # NSIS is skipped because we use --bundles msi (WiX only).
+          $tauriTools = "$env:LOCALAPPDATA\tauri"
+
+          # WiX 3.14 — tauri checks %LOCALAPPDATA%\tauri\WixTools314\
+          $wixUrl = "https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip"
+          $wixZip = "$env:TEMP\wix314.zip"
+          $wixDir = "$tauriTools\WixTools314"
+          New-Item -ItemType Directory -Force -Path $wixDir | Out-Null
+          Invoke-WebRequest -Uri $wixUrl -OutFile $wixZip
+          Expand-Archive -Path $wixZip -DestinationPath $wixDir -Force
+          Write-Host "WiX installed to $wixDir ($(Get-ChildItem $wixDir | Measure-Object | Select-Object -Expand Count) files)"
 
       - name: Build the app
         uses: tauri-apps/tauri-action@v0
