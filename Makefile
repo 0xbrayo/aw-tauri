@@ -13,11 +13,25 @@ ifdef TAURI_SIGNING_PRIVATE_KEY
 TAURI_BUILD_ARGS += --config '{"bundle":{"createUpdaterArtifacts":true}}'
 endif
 
+# When TAURI_SIGNING_PRIVATE_KEY is present, the Makefile override above sets
+# bundle.createUpdaterArtifacts=true. That flag is therefore absent from
+# tauri.conf.json even though signed builds produce .sig files.
+#
+# When src-tauri/modules/ contains staged binaries (e.g. aw-awatcher, aw-sync
+# prepared by the activitywatch bundle build), inject them via bundle.resources
+# so deb/rpm/AppImage are self-contained. Standalone builds without that dir are
+# unchanged. See ActivityWatch/aw-tauri#232.
 build: prebuild
-	# When TAURI_SIGNING_PRIVATE_KEY is present, the Makefile override above sets
-	# bundle.createUpdaterArtifacts=true. That flag is therefore absent from
-	# tauri.conf.json even though signed builds produce .sig files.
+ifeq ($(OS),Linux)
+	@if [ -d src-tauri/modules ] && ls src-tauri/modules/aw-* >/dev/null 2>&1; then \
+		echo "Bundling modules from src-tauri/modules/ into Linux packages"; \
+		npm run tauri build -- $(TAURI_BUILD_ARGS) --config '{"bundle":{"resources":{"modules/":"modules/"}}}'; \
+	else \
+		npm run tauri build -- $(TAURI_BUILD_ARGS); \
+	fi
+else
 	npm run tauri build -- $(TAURI_BUILD_ARGS)
+endif
 
 dev: prebuild
 	npm run tauri dev
