@@ -7,8 +7,21 @@ else
 endif
 OS := $(shell uname -s)
 
+# When src-tauri/modules/ contains staged binaries (e.g. aw-awatcher, aw-sync
+# prepared by the activitywatch bundle build), inject them via bundle.resources
+# so deb/rpm/AppImage are self-contained. Standalone builds without that dir are
+# unchanged. See ActivityWatch/aw-tauri#232.
 build: prebuild
+ifeq ($(OS),Linux)
+	@if [ -d src-tauri/modules ] && ls src-tauri/modules/aw-* >/dev/null 2>&1; then \
+		echo "Bundling modules from src-tauri/modules/ into Linux packages"; \
+		npm run tauri build -- --config '{"bundle":{"resources":{"modules/":"modules/"}}}'; \
+	else \
+		npm run tauri build; \
+	fi
+else
 	npm run tauri build
+endif
 
 dev: prebuild
 	npm run tauri dev
